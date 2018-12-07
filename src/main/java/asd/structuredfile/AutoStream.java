@@ -45,9 +45,9 @@ public class AutoStream extends InputStream {
             return;
         try {
             wrapped = opener.call();
+        } catch (IOException ex) {
+            throw ex;
         } catch (Exception ex) {
-            if (ex instanceof IOException)
-                throw (IOException)ex;
             throw new IOException(ex);
         }
     }

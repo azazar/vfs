@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import org.apache.commons.io.IOUtils;
@@ -102,8 +103,10 @@ public class StructuredFile {
 
         try {
             return opener.call();
+        } catch (IOException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw ex instanceof IOException ? (IOException)ex : new IOException(ex);
+            throw new IOException(ex);
         }
     }
     
@@ -124,9 +127,8 @@ public class StructuredFile {
         }
     }
 
-    private static Charset UTF8 = Charset.forName("UTF-8");
     public String getContentAsUTF8String() throws IOException {
-        return new String(getContent(), UTF8);
+        return new String(getContent(), StandardCharsets.UTF_8);
     }
 
     public String getContentAsString(Charset charset) throws IOException {

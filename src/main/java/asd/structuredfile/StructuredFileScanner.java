@@ -53,7 +53,7 @@ public class StructuredFileScanner {
     }
 
     public void scan(StructuredFile file) throws IOException {
-        scan(file, new AutoStream(() -> file.open()));
+        scan(file, new AutoStream(file::open));
     }
 
     public void scan(StructuredFile file, InputStream in) throws IOException {
@@ -64,14 +64,14 @@ public class StructuredFileScanner {
                 final ZipFile zf = new ZipFile((File)file.file);
                 zf.stream().parallel().forEach(ze -> {
                     try {
-                        StructuredFile f = new StructuredFile(file.file, new String[] { ze.getName() });
+                        StructuredFile f = new StructuredFile(file.file, ze.getName());
                         f.setLastModified(ze.getTime());
-                        f.setOpener(() -> {
-                            return zf.getInputStream(ze);
-                        });
-                        scan(f, new AutoStream(() -> {
-                            return zf.getInputStream(ze);
-                        }), true);
+                        f.setOpener(
+                            () -> zf.getInputStream(ze)
+                        );
+                        scan(f, new AutoStream(
+                            () -> zf.getInputStream(ze)
+                        ), true);
                     } catch (IOException | RuntimeException ex) {
                         Logger.getLogger(StructuredFileScanner.class.getName()).log(Level.SEVERE, null, ex);
                     }
@@ -146,14 +146,14 @@ public class StructuredFileScanner {
                 String[] deepPath = new String[file.archived.length + 1];
                 System.arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
 
-                a.getFileHeaders().stream().forEach((fh) -> {
+                a.getFileHeaders().stream().forEach(fh -> {
                     deepPath[file.archived.length] = fh.getFileNameString();
                     StructuredFile df = new StructuredFile(file.file, deepPath);
                     df.setLastModified(fh.getMTime().getTime());
 
-                    df.setOpener(() -> {
-                        return a.getInputStream(fh);
-                    });
+                    df.setOpener(
+                        () ->  a.getInputStream(fh)
+                    );
 
                     try {
                         scan(df);
@@ -167,8 +167,9 @@ public class StructuredFileScanner {
             } catch (RarException | IOException | RuntimeException ex) {
                 LOG.log(Level.SEVERE, "Error scanning " + file, ex);
             } finally {
-                if (tempFile != null)
-                tempFile.delete();
+                if (tempFile != null) {
+                    tempFile.delete();
+                }
             }
             
             return;

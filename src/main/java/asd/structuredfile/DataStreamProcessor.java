@@ -29,9 +29,9 @@ package asd.structuredfile;
  */
 public interface DataStreamProcessor {
 
-    public void process(byte[] data, int ofs, int len);
+    void process(byte[] data, int ofs, int len);
     
-    default public void process(byte[] data) {
+    default void process(byte[] data) {
         process(data, 0, data.length);
     }
 
