@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package asd.structuredfile;
+package net.uo1.vfs;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -1,7 +1,7 @@
 /*
  * PROPRIETARY/CONFIDENTIAL
  */
-package asd.structuredfile;
+package net.uo1.vfs;
 
 import java.io.IOException;
 import java.io.InputStream;

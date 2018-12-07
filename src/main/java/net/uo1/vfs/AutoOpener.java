@@ -1,7 +1,7 @@
 /*
  * PROPRIETARY/CONFIDENTIAL
  */
-package asd.structuredfile;
+package net.uo1.vfs;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -1,14 +1,12 @@
 /*
  * PROPRIETARY/CONFIDENTIAL
  */
-package asd.structuredfile;
+package net.uo1.vfs;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.commons.io.IOUtils;
-import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  *
