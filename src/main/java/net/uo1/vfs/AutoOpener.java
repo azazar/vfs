@@ -37,17 +37,16 @@ class AutoOpener implements Callable<InputStream> {
     }
     
     InputStream openWrappedStream(InputStream in, String filename, String[] internal) throws IOException {
-        if (filename.endsWith(".gz")) {
-            in = new GZIPInputStream(in);
-            filename = filename.substring(0, filename.length() - 3);
-        }
-        else if (filename.endsWith(".zst")) {
-            in = new ZstdInputStream(in);
-            filename = filename.substring(0, filename.length() - 4);
-        }
-        
         if (internal.length == 0) {
             return in;
+        }
+
+        if (filename.equals(internal[0] + ".gz")) {
+            return openWrappedStream(new GZIPInputStream(in), internal[0], ArrayUtil.shift(internal));
+        }
+
+        if (filename.equals(internal[0] + ".zst")) {
+            return openWrappedStream(new ZstdInputStream(in), internal[0], ArrayUtil.shift(internal));
         }
 
         if (filename.endsWith(".zip")) {

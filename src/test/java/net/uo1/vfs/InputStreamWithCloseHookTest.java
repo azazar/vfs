@@ -17,7 +17,8 @@ import org.apache.commons.io.IOUtils;
 public class InputStreamWithCloseHookTest {
 
     public static void main(String[] args) throws IOException {
-        StructuredFile f = new StructuredFile(new File("/tmp/1.zip"), "1");
+        //StructuredFile f = new StructuredFile(new File("/tmp/1.zip"), "1");
+        StructuredFile f = new StructuredFile(new File("/tmp/export.csv.zst"), "export.csv");
 
         try (InputStream i = f.open()) {
             System.out.println(IOUtils.toString(i, StandardCharsets.UTF_8));
