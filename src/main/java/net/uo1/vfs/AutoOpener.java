@@ -3,6 +3,7 @@
  */
 package net.uo1.vfs;
 
+import com.github.luben.zstd.ZstdInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -39,6 +40,10 @@ class AutoOpener implements Callable<InputStream> {
         if (filename.endsWith(".gz")) {
             in = new GZIPInputStream(in);
             filename = filename.substring(0, filename.length() - 3);
+        }
+        else if (filename.endsWith(".zst")) {
+            in = new ZstdInputStream(in);
+            filename = filename.substring(0, filename.length() - 4);
         }
         
         if (internal.length == 0) {
