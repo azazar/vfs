@@ -48,6 +48,6 @@ public class InputStreamWithCloseHookTest {
 <dependency>
     <groupId>com.github.azazar</groupId>
     <artifactId>vfs</artifactId>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
 </dependency>
 ```
