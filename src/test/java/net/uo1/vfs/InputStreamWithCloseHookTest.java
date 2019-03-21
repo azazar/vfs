@@ -18,10 +18,22 @@ public class InputStreamWithCloseHookTest {
 
     public static void main(String[] args) throws IOException {
         StructuredFile f = new StructuredFile(new File("/tmp/1.zip"), "1");
-        
+
         try (InputStream i = f.open()) {
             System.out.println(IOUtils.toString(i, StandardCharsets.UTF_8));
         }
+
+        StructuredFileScanner scanner = new StructuredFileScanner(file -> {
+            try {
+                System.out.println(file.getContentAsUTF8String());
+            }
+            catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        scanner.scan(new File("/tmp/textfiles.zip"));
+
     }
     
 }
