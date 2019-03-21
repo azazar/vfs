@@ -42,7 +42,7 @@ public class InputStreamWithCloseHookTest {
 </repositories>
 ```
 
-### Artefact
+### Artifact
 
 ```xml
 <dependency>
