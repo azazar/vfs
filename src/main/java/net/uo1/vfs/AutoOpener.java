@@ -40,6 +40,12 @@ class AutoOpener implements Callable<InputStream> {
         if (internal.length == 0) {
             return in;
         }
+        
+        int i = filename.lastIndexOf('/');
+        
+        if (i != -1) {
+            filename = filename.substring(i + 1);
+        }
 
         if (filename.equals(internal[0] + ".gz")) {
             return openWrappedStream(new GZIPInputStream(in), internal[0], ArrayUtil.shift(internal));
