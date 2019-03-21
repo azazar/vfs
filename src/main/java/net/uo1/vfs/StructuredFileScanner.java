@@ -59,6 +59,10 @@ public class StructuredFileScanner {
     public void scan(StructuredFile file, InputStream in) throws IOException {
         String p = file.getLastPath().toLowerCase();
         
+        if (p.endsWith(".gz") || p.endsWith(".zst")) {
+            LOG.warning("Scanning through GZip or ZStd files not yet implemented");
+        }
+        
         if (p.endsWith(".zip")) {
             if (file.isNative()) {
                 final ZipFile zf = new ZipFile((File)file.file);
