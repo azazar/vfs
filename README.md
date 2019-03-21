@@ -1,6 +1,4 @@
-## Maven
-
-### Example
+## Example
 
 ```java
 public class InputStreamWithCloseHookTest {
@@ -30,6 +28,8 @@ public class InputStreamWithCloseHookTest {
     
 }
 ```
+
+## Maven
 
 ### Repository
 
