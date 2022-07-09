@@ -11,7 +11,7 @@ import java.io.InputStream;
  * @author Mikhail Yevchenko <123@ǟẓåẓạŗ.ćọ₥>
  */
 class InputStreamWithCloseHook extends InputStream {
-    
+
     private final InputStream wrapped;
     private final Runnable hook;
 
@@ -42,12 +42,10 @@ class InputStreamWithCloseHook extends InputStream {
     public void close() throws IOException {
         try {
             wrapped.close();
-        }
-        finally {
+        } finally {
             try {
                 hook.run();
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 if (ex instanceof IOException) {
                     throw (IOException) ex;
                 }
@@ -80,5 +78,5 @@ class InputStreamWithCloseHook extends InputStream {
     public int read() throws IOException {
         return wrapped.read();
     }
-    
+
 }

@@ -58,30 +58,30 @@ public class StructuredFileScanner {
 
     public void scan(StructuredFile file, InputStream in) throws IOException {
         String p = file.getLastPath().toLowerCase();
-        
+
         if (p.endsWith(".gz") || p.endsWith(".zst")) {
             LOG.warning("Scanning through GZip or ZStd files not yet implemented");
         }
-        
+
         if (p.endsWith(".zip")) {
             if (file.isNative()) {
-                final ZipFile zf = new ZipFile((File)file.file);
+                final ZipFile zf = new ZipFile((File) file.file);
                 zf.stream().parallel().forEach(ze -> {
                     try {
                         StructuredFile f = new StructuredFile(file.file, ze.getName());
                         f.setLastModified(ze.getTime());
                         f.setOpener(
-                            () -> zf.getInputStream(ze)
+                                () -> zf.getInputStream(ze)
                         );
                         scan(f, new AutoStream(
-                            () -> zf.getInputStream(ze)
+                                () -> zf.getInputStream(ze)
                         ), true);
                     } catch (IOException | RuntimeException ex) {
                         Logger.getLogger(StructuredFileScanner.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 });
             } else {
-                try (ZipInputStream zis = new ZipInputStream(in)) {
+                try ( ZipInputStream zis = new ZipInputStream(in)) {
                     ZipEntry e;
                     while ((e = zis.getNextEntry()) != null) {
                         String[] deepPath = new String[file.archived.length + 1];
@@ -133,20 +133,20 @@ public class StructuredFileScanner {
             }
             return;
         }
-        
+
         if (p.endsWith(".rar")) {
             File tempFile = null;
             if (!file.isNative()) {
                 tempFile = File.createTempFile("dfs", ".rar");
             }
-            
+
             if (tempFile != null) {
-                try (FileOutputStream o = new FileOutputStream(tempFile)) {
+                try ( FileOutputStream o = new FileOutputStream(tempFile)) {
                     IOUtils.copy(file.open(), o);
                 }
             }
-            
-            try (Archive a = new Archive(tempFile == null ? (File)file.file : tempFile)) {
+
+            try ( Archive a = new Archive(tempFile == null ? (File) file.file : tempFile)) {
                 String[] deepPath = new String[file.archived.length + 1];
                 System.arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
 
@@ -156,7 +156,7 @@ public class StructuredFileScanner {
                     df.setLastModified(fh.getMTime().getTime());
 
                     df.setOpener(
-                        () ->  a.getInputStream(fh)
+                            () -> a.getInputStream(fh)
                     );
 
                     try {
@@ -175,19 +175,20 @@ public class StructuredFileScanner {
                     tempFile.delete();
                 }
             }
-            
+
             return;
         }
 
         consumer.accept(file);
     }
-    
+
     public void scan(StructuredFile file, InputStream in, boolean closeStream) throws IOException {
         try {
             scan(file, in);
         } finally {
-            if (closeStream)
+            if (closeStream) {
                 in.close();
+            }
         }
     }
 
@@ -202,8 +203,8 @@ public class StructuredFileScanner {
             });
             return;
         }
-        
+
         scan(new StructuredFile(file));
     }
-    
+
 }

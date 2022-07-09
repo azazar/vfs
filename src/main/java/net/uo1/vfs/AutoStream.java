@@ -32,17 +32,18 @@ import java.util.concurrent.Callable;
  * @author Mikhail Yevchenko <spam@azazar.com>
  */
 public class AutoStream extends InputStream {
-    
+
     protected Callable<InputStream> opener;
     protected InputStream wrapped;
 
     public AutoStream(Callable<InputStream> opener) {
         this.opener = opener;
     }
-    
+
     protected void openIfNecessary() throws IOException {
-        if (wrapped != null)
+        if (wrapped != null) {
             return;
+        }
         try {
             wrapped = opener.call();
         } catch (IOException ex) {
@@ -77,8 +78,9 @@ public class AutoStream extends InputStream {
 
     @Override
     public synchronized void mark(int readlimit) {
-        if (wrapped != null)
+        if (wrapped != null) {
             wrapped.mark(readlimit);
+        }
     }
 
     @Override
@@ -101,8 +103,9 @@ public class AutoStream extends InputStream {
 
     @Override
     public void close() throws IOException {
-        if (wrapped == null)
+        if (wrapped == null) {
             return;
+        }
         wrapped.close();
     }
 

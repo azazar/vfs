@@ -30,7 +30,7 @@ package net.uo1.vfs;
 public interface DataStreamProcessor {
 
     void process(byte[] data, int ofs, int len);
-    
+
     default void process(byte[] data) {
         process(data, 0, data.length);
     }

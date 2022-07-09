@@ -11,10 +11,11 @@ import java.util.Arrays;
  */
 class ArrayUtil {
 
-    private ArrayUtil() {}
-
     public static String[] shift(String[] a) {
         return Arrays.copyOfRange(a, 1, a.length);
     }
-    
+
+    private ArrayUtil() {
+    }
+
 }

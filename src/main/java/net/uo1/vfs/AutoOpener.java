@@ -24,7 +24,7 @@ import java.util.zip.ZipInputStream;
 class AutoOpener implements Callable<InputStream> {
 
     private static final Logger LOG = Logger.getLogger(AutoOpener.class.getName());
-    
+
     private final StructuredFile file;
 
     AutoOpener(StructuredFile file) {
@@ -35,14 +35,14 @@ class AutoOpener implements Callable<InputStream> {
     public InputStream call() throws Exception {
         return open();
     }
-    
+
     InputStream openWrappedStream(InputStream in, String filename, String[] internal) throws IOException {
         if (internal.length == 0) {
             return in;
         }
-        
+
         int i = filename.lastIndexOf('/');
-        
+
         if (i != -1) {
             filename = filename.substring(i + 1);
         }
@@ -57,10 +57,10 @@ class AutoOpener implements Callable<InputStream> {
 
         if (filename.endsWith(".zip")) {
             ZipInputStream zis = new ZipInputStream(in);
-            
+
             try {
                 ZipEntry ze;
-                
+
                 while ((ze = zis.getNextEntry()) != null) {
                     if (ze.getName().equals(internal[0])) {
                         InputStream w = zis;
@@ -68,24 +68,21 @@ class AutoOpener implements Callable<InputStream> {
                         return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], ArrayUtil.shift(internal)), () -> {
                             try {
                                 w.close();
-                            }
-                            catch (IOException ex) {
+                            } catch (IOException ex) {
                                 LOG.log(Level.SEVERE, null, ex);
                             }
                         });
                     }
                 }
-            }
-            finally {
+            } finally {
                 if (zis != null) {
                     zis.close();
                 }
             }
         }
-        
+
         throw new FileNotFoundException(internal[0]);
     }
-    
 
     InputStream open() throws IOException {
         InputStream in;
@@ -94,12 +91,10 @@ class AutoOpener implements Callable<InputStream> {
         if (file.file instanceof File) {
             in = new FileInputStream((File) file.file);
             filename = ((File) file.file).getName();
-        }
-        else if (file.file instanceof URL) {
-            in = ((URL)file.file).openStream();
-            filename = ((URL)file.file).getFile();
-        }
-        else {
+        } else if (file.file instanceof URL) {
+            in = ((URL) file.file).openStream();
+            filename = ((URL) file.file).getFile();
+        } else {
             throw new IllegalStateException(file.file.toString());
         }
 

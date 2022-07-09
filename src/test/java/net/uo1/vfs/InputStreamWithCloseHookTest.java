@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -20,15 +19,14 @@ public class InputStreamWithCloseHookTest {
         //StructuredFile f = new StructuredFile(new File("/tmp/1.zip"), "1");
         StructuredFile f = new StructuredFile(new File("/tmp/export.csv.zst"), "export.csv");
 
-        try (InputStream i = f.open()) {
+        try ( InputStream i = f.open()) {
             System.out.println(IOUtils.toString(i, StandardCharsets.UTF_8));
         }
 
         StructuredFileScanner scanner = new StructuredFileScanner(file -> {
             try {
                 System.out.println(file.getContentAsUTF8String());
-            }
-            catch (IOException ex) {
+            } catch (IOException ex) {
                 ex.printStackTrace();
             }
         });
@@ -36,5 +34,5 @@ public class InputStreamWithCloseHookTest {
         scanner.scan(new File("/tmp/textfiles.zip"));
 
     }
-    
+
 }

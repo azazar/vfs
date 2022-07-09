@@ -39,9 +39,11 @@ import org.apache.commons.io.IOUtils;
  * @author Mikhail Yevchenko <spam@azazar.com>
  */
 public class StructuredFile {
-    
+
     public final Object file;
     public final String[] archived;
+    private Callable<InputStream> opener = new AutoOpener(this);
+    private Long modified = null;
 
     public StructuredFile(Object file, String... archived) {
         this.file = Objects.requireNonNull(file);
@@ -50,38 +52,39 @@ public class StructuredFile {
 
     public String getLastPath() {
         if (archived.length == 0) {
-            if (file instanceof File)
-                return ((File)file).getPath();
-            
+            if (file instanceof File) {
+                return ((File) file).getPath();
+            }
+
             return file.toString();
-        }
-        else {
+        } else {
             return archived[archived.length - 1];
         }
     }
 
     public String getLastName() {
         if (archived.length == 0) {
-            if (file instanceof File)
-                return ((File)file).getName();
-            else
+            if (file instanceof File) {
+                return ((File) file).getName();
+            } else {
                 return file.toString();
+            }
         }
 
         String name = archived[archived.length - 1];
-        
+
         int i = name.lastIndexOf('/');
-        if (i != -1)
+        if (i != -1) {
             name = name.substring(i + 1);
-        
+        }
+
         i = name.lastIndexOf('\\');
-        if (i != -1)
+        if (i != -1) {
             name = name.substring(i + 1);
-        
+        }
+
         return name;
     }
-
-    private Callable<InputStream> opener = new AutoOpener(this);
 
     public Callable<InputStream> getOpener() {
         return opener;
@@ -90,15 +93,16 @@ public class StructuredFile {
     public void setOpener(Callable<InputStream> opener) {
         this.opener = opener;
     }
-    
+
     public InputStream open() throws IOException {
         if (archived.length == 0) {
-            if (file instanceof File)
-                return new FileInputStream((File)file);
-            else if (file instanceof URL)
-                return ((URL)file).openStream();
-            else
+            if (file instanceof File) {
+                return new FileInputStream((File) file);
+            } else if (file instanceof URL) {
+                return ((URL) file).openStream();
+            } else {
                 throw new IllegalStateException(file.getClass().toString());
+            }
         }
 
         try {
@@ -109,18 +113,18 @@ public class StructuredFile {
             throw new IOException(ex);
         }
     }
-    
+
     public byte[] getContent() throws IOException {
-        try (InputStream is = open()) {
+        try ( InputStream is = open()) {
             return IOUtils.toByteArray(is);
         }
     }
-    
+
     public void process(DataStreamProcessor dsp) throws IOException {
-        try (InputStream is = open()) {
+        try ( InputStream is = open()) {
             byte[] buf = new byte[65536];
             int nr;
-            
+
             while ((nr = is.read(buf)) != -1) {
                 dsp.process(buf, 0, nr);
             }
@@ -134,7 +138,7 @@ public class StructuredFile {
     public String getContentAsString(Charset charset) throws IOException {
         return new String(getContent(), charset);
     }
-    
+
     public boolean isNative() {
         return archived.length == 0 && file instanceof File;
     }
@@ -149,15 +153,14 @@ public class StructuredFile {
         return b.toString();
     }
 
-    private Long modified = null;
-    
     public Long lastModified() {
-        if (modified != null)
+        if (modified != null) {
             return modified;
+        }
 
-        return isNative() ? ((File)file).lastModified() : null;
+        return isNative() ? ((File) file).lastModified() : null;
     }
-    
+
     public void setLastModified(Long modified) {
         this.modified = modified;
     }
