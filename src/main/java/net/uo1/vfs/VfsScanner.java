@@ -26,17 +26,20 @@ package net.uo1.vfs;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import java.io.File;
+import static java.io.File.createTempFile;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
+import static java.lang.System.arraycopy;
+import static java.util.Arrays.asList;
 import java.util.function.Consumer;
-import java.util.logging.Level;
+import static java.util.logging.Level.SEVERE;
 import java.util.logging.Logger;
+import static java.util.logging.Logger.getLogger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
-import org.apache.commons.io.IOUtils;
+import static org.apache.commons.io.IOUtils.copy;
 
 /**
  *
@@ -44,7 +47,7 @@ import org.apache.commons.io.IOUtils;
  */
 public class VfsScanner {
 
-    private static final Logger LOG = Logger.getLogger(VfsScanner.class.getName());
+    private static final Logger LOG = getLogger(VfsScanner.class.getName());
 
     protected Consumer<VfsFile> consumer;
 
@@ -57,7 +60,7 @@ public class VfsScanner {
     }
 
     public void scan(VfsFile file, InputStream in) throws IOException {
-        String p = file.getLastPath().toLowerCase();
+        var p = file.getLastPath().toLowerCase();
 
         if (p.endsWith(".gz") || p.endsWith(".zst")) {
             LOG.warning("Scanning through GZip or ZStd files not yet implemented");
@@ -65,10 +68,10 @@ public class VfsScanner {
 
         if (p.endsWith(".zip")) {
             if (file.isNative()) {
-                final ZipFile zf = new ZipFile((File) file.file);
+                final var zf = new ZipFile((File) file.file);
                 zf.stream().parallel().forEach(ze -> {
                     try {
-                        VfsFile f = new VfsFile(file.file, ze.getName());
+                        var f = new VfsFile(file.file, ze.getName());
                         f.setLastModified(ze.getTime());
                         f.setOpener(
                                 () -> zf.getInputStream(ze)
@@ -77,17 +80,17 @@ public class VfsScanner {
                                 () -> zf.getInputStream(ze)
                         ), true);
                     } catch (IOException | RuntimeException ex) {
-                        Logger.getLogger(VfsScanner.class.getName()).log(Level.SEVERE, null, ex);
+                        getLogger(VfsScanner.class.getName()).log(SEVERE, null, ex);
                     }
                 });
             } else {
-                try ( ZipInputStream zis = new ZipInputStream(in)) {
+                try ( var zis = new ZipInputStream(in)) {
                     ZipEntry e;
                     while ((e = zis.getNextEntry()) != null) {
-                        String[] deepPath = new String[file.archived.length + 1];
-                        System.arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
+                        var deepPath = new String[file.archived.length + 1];
+                        arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
                         deepPath[file.archived.length] = e.getName();
-                        VfsFile df = new VfsFile(file.file, deepPath);
+                        var df = new VfsFile(file.file, deepPath);
                         df.setLastModified(e.getTime());
                         df.setOpener(() -> {
                             df.setOpener(null);
@@ -128,7 +131,7 @@ public class VfsScanner {
                         df.setOpener(null);
                     }
                 } catch (IOException | RuntimeException ex) {
-                    LOG.log(Level.SEVERE, "Error scanning " + file, ex);
+                    LOG.log(SEVERE, "Error scanning " + file, ex);
                 }
             }
             return;
@@ -137,22 +140,22 @@ public class VfsScanner {
         if (p.endsWith(".rar")) {
             File tempFile = null;
             if (!file.isNative()) {
-                tempFile = File.createTempFile("dfs", ".rar");
+                tempFile = createTempFile("dfs", ".rar");
             }
 
             if (tempFile != null) {
-                try ( FileOutputStream o = new FileOutputStream(tempFile)) {
-                    IOUtils.copy(file.open(), o);
+                try ( var o = new FileOutputStream(tempFile)) {
+                    copy(file.open(), o);
                 }
             }
 
-            try ( Archive a = new Archive(tempFile == null ? (File) file.file : tempFile)) {
-                String[] deepPath = new String[file.archived.length + 1];
-                System.arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
+            try ( var a = new Archive(tempFile == null ? (File) file.file : tempFile)) {
+                var deepPath = new String[file.archived.length + 1];
+                arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
 
                 a.getFileHeaders().stream().forEach(fh -> {
                     deepPath[file.archived.length] = fh.getFileNameString();
-                    VfsFile df = new VfsFile(file.file, deepPath);
+                    var df = new VfsFile(file.file, deepPath);
                     df.setLastModified(fh.getMTime().getTime());
 
                     df.setOpener(
@@ -162,14 +165,14 @@ public class VfsScanner {
                     try {
                         scan(df);
                     } catch (IOException ex) {
-                        LOG.log(Level.SEVERE, "Error scanning " + file, ex);
+                        LOG.log(SEVERE, "Error scanning " + file, ex);
                     }
 
                     df.setOpener(null);
                 });
 
             } catch (RarException | IOException | RuntimeException ex) {
-                LOG.log(Level.SEVERE, "Error scanning " + file, ex);
+                LOG.log(SEVERE, "Error scanning " + file, ex);
             } finally {
                 if (tempFile != null) {
                     tempFile.delete();
@@ -194,11 +197,11 @@ public class VfsScanner {
 
     public void scan(File file) throws IOException {
         if (file.isDirectory()) {
-            Arrays.asList(file.listFiles()).parallelStream().forEach(t -> {
+            asList(file.listFiles()).parallelStream().forEach(t -> {
                 try {
                     scan(t);
                 } catch (IOException | RuntimeException ex) {
-                    Logger.getLogger(VfsScanner.class.getName()).log(Level.SEVERE, null, ex);
+                    getLogger(VfsScanner.class.getName()).log(SEVERE, null, ex);
                 }
             });
             return;

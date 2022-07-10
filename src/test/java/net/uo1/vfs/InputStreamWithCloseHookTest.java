@@ -5,8 +5,8 @@ package net.uo1.vfs;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import static java.lang.System.out;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import org.apache.commons.io.IOUtils;
 
 /**
@@ -17,15 +17,15 @@ public class InputStreamWithCloseHookTest {
 
     public static void main(String[] args) throws IOException {
         //StructuredFile f = new StructuredFile(new File("/tmp/1.zip"), "1");
-        VfsFile f = new VfsFile(new File("/tmp/export.csv.zst"), "export.csv");
+        var f = new VfsFile(new File("/tmp/export.csv.zst"), "export.csv");
 
-        try ( InputStream i = f.open()) {
-            System.out.println(IOUtils.toString(i, StandardCharsets.UTF_8));
+        try ( var i = f.open()) {
+            out.println(IOUtils.toString(i, UTF_8));
         }
 
-        VfsScanner scanner = new VfsScanner(file -> {
+        var scanner = new VfsScanner(file -> {
             try {
-                System.out.println(file.getContentAsUTF8String());
+                out.println(file.getContentAsUTF8String());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }

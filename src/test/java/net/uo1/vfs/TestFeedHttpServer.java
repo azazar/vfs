@@ -5,18 +5,19 @@ package net.uo1.vfs;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import static com.sun.net.httpserver.HttpServer.create;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import static java.lang.Integer.MAX_VALUE;
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import static java.util.concurrent.Executors.newFixedThreadPool;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.logging.Level.SEVERE;
+import static java.util.logging.Logger.getLogger;
 import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -39,30 +40,30 @@ class TestFeedHttpServer implements AutoCloseable {
 
     public TestFeedHttpServer(int port) throws IOException {
         this.port = port;
-        server = HttpServer.create(new InetSocketAddress(port), 10);
+        server = create(new InetSocketAddress(port), 10);
         server.createContext(GZIP_CSV_URI, this::gzipCsv);
         server.createContext(ZIP_CSV_URI, this::zipCsv);
         server.createContext(TGZ_CSV_URI, this::tarGzipCsv);
         server.createContext("/", hx -> {
             hx.getResponseHeaders().add("Content-Type", "text/plain");
             hx.sendResponseHeaders(404, 0);
-            try ( OutputStream os = hx.getResponseBody()) {
-                os.write("Not Found".getBytes(StandardCharsets.ISO_8859_1));
+            try ( var os = hx.getResponseBody()) {
+                os.write("Not Found".getBytes(ISO_8859_1));
             }
         });
-        executorService = Executors.newFixedThreadPool(4);
+        executorService = newFixedThreadPool(4);
         server.setExecutor(executorService);
         server.start();
     }
 
     @Override
     public void close() {
-        server.stop(Integer.MAX_VALUE);
+        server.stop(MAX_VALUE);
         executorService.shutdownNow();
         try {
-            executorService.awaitTermination(1, TimeUnit.MINUTES);
+            executorService.awaitTermination(1, MINUTES);
         } catch (InterruptedException ex) {
-            Logger.getLogger(TestFeedHttpServer.class.getName()).log(Level.SEVERE, null, ex);
+            getLogger(TestFeedHttpServer.class.getName()).log(SEVERE, null, ex);
         }
     }
 
@@ -89,7 +90,7 @@ class TestFeedHttpServer implements AutoCloseable {
         try ( Writer sw = new OutputStreamWriter(new GZIPOutputStream(hx.getResponseBody()))) {
             buildFile(sw);
         } catch (IOException ex) {
-            Logger.getLogger(TestFeedHttpServer.class.getName()).log(Level.SEVERE, null, ex);
+            getLogger(TestFeedHttpServer.class.getName()).log(SEVERE, null, ex);
         }
     }
 
@@ -97,14 +98,14 @@ class TestFeedHttpServer implements AutoCloseable {
         hx.getResponseHeaders().add("Content-Type", "application/zip");
         hx.sendResponseHeaders(200, 0);
 
-        try ( ZipOutputStream zos = new ZipOutputStream(hx.getResponseBody())) {
+        try ( var zos = new ZipOutputStream(hx.getResponseBody())) {
             zos.putNextEntry(new ZipEntry("test.csv"));
             Writer sw = new OutputStreamWriter(zos);
             buildFile(sw);
             sw.flush();
             zos.closeEntry();
         } catch (IOException ex) {
-            Logger.getLogger(TestFeedHttpServer.class.getName()).log(Level.SEVERE, null, ex);
+            getLogger(TestFeedHttpServer.class.getName()).log(SEVERE, null, ex);
         }
     }
 
@@ -112,24 +113,23 @@ class TestFeedHttpServer implements AutoCloseable {
         hx.getResponseHeaders().add("Content-Type", "application/gzip");
         hx.sendResponseHeaders(200, 0);
 
-        try ( TarArchiveOutputStream tos = new TarArchiveOutputStream(new GZIPOutputStream(hx.getResponseBody()))) {
-            byte[] csv = TestFeedHttpServer.this.buildFile();
-
-            TarArchiveEntry entry = new TarArchiveEntry("test.csv");
+        try ( var tos = new TarArchiveOutputStream(new GZIPOutputStream(hx.getResponseBody()))) {
+            var csv = TestFeedHttpServer.this.buildFile();
+            var entry = new TarArchiveEntry("test.csv");
             entry.setSize(csv.length);
 
             tos.putArchiveEntry(entry);
             tos.write(csv);
             tos.closeArchiveEntry();
         } catch (IOException ex) {
-            Logger.getLogger(TestFeedHttpServer.class.getName()).log(Level.SEVERE, null, ex);
+            getLogger(TestFeedHttpServer.class.getName()).log(SEVERE, null, ex);
         }
     }
 
     public byte[] buildFile() throws IOException {
-        ByteArrayOutputStream o = new ByteArrayOutputStream();
+        var o = new ByteArrayOutputStream();
 
-        try ( OutputStreamWriter w = new OutputStreamWriter(o)) {
+        try ( var w = new OutputStreamWriter(o)) {
             buildFile(w);
         }
 

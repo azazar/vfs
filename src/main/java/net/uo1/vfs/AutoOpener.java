@@ -10,13 +10,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
 import java.util.concurrent.Callable;
-import java.util.logging.Level;
+import static java.util.logging.Level.SEVERE;
 import java.util.logging.Logger;
+import static java.util.logging.Logger.getLogger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import static net.uo1.vfs.ArrayUtil.shift;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
@@ -28,7 +29,7 @@ import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStre
  */
 class AutoOpener implements Callable<InputStream> {
 
-    private static final Logger LOG = Logger.getLogger(AutoOpener.class.getName());
+    private static final Logger LOG = getLogger(AutoOpener.class.getName());
 
     private final VfsFile file;
 
@@ -46,26 +47,26 @@ class AutoOpener implements Callable<InputStream> {
             return in;
         }
 
-        int i = filename.lastIndexOf('/');
+        var i = filename.lastIndexOf('/');
 
         if (i != -1) {
             filename = filename.substring(i + 1);
         }
 
         if (filename.equals(internal[0] + ".gz")) {
-            return openWrappedStream(new GZIPInputStream(in), internal[0], ArrayUtil.shift(internal));
+            return openWrappedStream(new GZIPInputStream(in), internal[0], shift(internal));
         }
 
         if (filename.equals(internal[0] + ".bz2")) {
-            return openWrappedStream(new BZip2CompressorInputStream(in), internal[0], ArrayUtil.shift(internal));
+            return openWrappedStream(new BZip2CompressorInputStream(in), internal[0], shift(internal));
         }
 
         if (filename.equals(internal[0] + ".zst")) {
-            return openWrappedStream(new ZstdCompressorInputStream(in), internal[0], ArrayUtil.shift(internal));
+            return openWrappedStream(new ZstdCompressorInputStream(in), internal[0], shift(internal));
         }
 
         if (filename.endsWith(".zip")) {
-            ZipInputStream zis = new ZipInputStream(in);
+            var zis = new ZipInputStream(in);
 
             try {
                 ZipEntry ze;
@@ -74,11 +75,11 @@ class AutoOpener implements Callable<InputStream> {
                     if (ze.getName().equals(internal[0])) {
                         InputStream w = zis;
                         zis = null;
-                        return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], ArrayUtil.shift(internal)), () -> {
+                        return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], shift(internal)), () -> {
                             try {
                                 w.close();
                             } catch (IOException ex) {
-                                LOG.log(Level.SEVERE, null, ex);
+                                LOG.log(SEVERE, null, ex);
                             }
                         });
                     }
@@ -91,7 +92,7 @@ class AutoOpener implements Callable<InputStream> {
         }
 
         if (filename.endsWith(".tar") || filename.endsWith(".tgz")) {
-            TarArchiveInputStream zis = new TarArchiveInputStream(filename.endsWith(".tgz") ? new GZIPInputStream(in) : in);
+            var zis = new TarArchiveInputStream(filename.endsWith(".tgz") ? new GZIPInputStream(in) : in);
 
             try {
                 TarArchiveEntry ze;
@@ -100,11 +101,11 @@ class AutoOpener implements Callable<InputStream> {
                     if (ze.getName().equals(internal[0])) {
                         InputStream w = zis;
                         zis = null;
-                        return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], ArrayUtil.shift(internal)), () -> {
+                        return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], shift(internal)), () -> {
                             try {
                                 w.close();
                             } catch (IOException ex) {
-                                LOG.log(Level.SEVERE, null, ex);
+                                LOG.log(SEVERE, null, ex);
                             }
                         });
                     }
@@ -128,12 +129,16 @@ class AutoOpener implements Callable<InputStream> {
             filename = "file";
         } else if (file.file instanceof DataUrl) {
             in = new ByteArrayInputStream(((DataUrl) file.file).getContent());
-            switch (((DataUrl) file.file).getContentType()) {
-                case "application/gzip": filename = "file.gz"; break;
-                case "application/bzip2": filename = "file.bz2"; break;
-                case "application/zip": filename = "file.zip"; break;
-                default: filename = "file"; break;
-            }
+            filename = switch (((DataUrl) file.file).getContentType()) {
+                case "application/gzip" ->
+                    "file.gz";
+                case "application/bzip2" ->
+                    "file.bz2";
+                case "application/zip" ->
+                    "file.zip";
+                default ->
+                    "file";
+            };
         } else if (file.file instanceof File) {
             in = new FileInputStream((File) file.file);
             filename = ((File) file.file).getName();

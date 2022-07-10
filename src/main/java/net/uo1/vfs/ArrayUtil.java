@@ -3,7 +3,7 @@
  */
 package net.uo1.vfs;
 
-import java.util.Arrays;
+import static java.util.Arrays.copyOfRange;
 
 /**
  *
@@ -12,7 +12,7 @@ import java.util.Arrays;
 class ArrayUtil {
 
     public static String[] shift(String[] a) {
-        return Arrays.copyOfRange(a, 1, a.length);
+        return copyOfRange(a, 1, a.length);
     }
 
     private ArrayUtil() {

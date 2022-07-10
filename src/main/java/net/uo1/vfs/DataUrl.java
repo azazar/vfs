@@ -3,46 +3,49 @@
  */
 package net.uo1.vfs;
 
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import static java.net.URLDecoder.decode;
+import static java.net.URLEncoder.encode;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Base64.getDecoder;
+import static java.util.Base64.getEncoder;
 
 /**
  *
  * @author m
  */
 public class DataUrl {
-    
+
     public static boolean isDataUrl(String url) {
         return url != null && url.startsWith("data:");
     }
-    
-    public static DataUrl parse(String url) {
-        if (!url.startsWith("data:"))
-            throw new IllegalArgumentException(url);
 
-        String data = url.substring(5);
+    public static DataUrl parse(String url) {
+        if (!url.startsWith("data:")) {
+            throw new IllegalArgumentException(url);
+        }
+
+        var data = url.substring(5);
         String contentType = null;
 
-        int commaIndex = data.indexOf(',');
-
-        boolean base64 = false;
+        var commaIndex = data.indexOf(',');
+        var base64 = false;
 
         if (commaIndex != -1) {
-            int semicolonIndex = data.indexOf(';');
+            var semicolonIndex = data.indexOf(';');
 
             if (semicolonIndex != -1) {
-                String header = data.substring(semicolonIndex + 1, commaIndex);
+                var header = data.substring(semicolonIndex + 1, commaIndex);
 
                 base64 = "base64".equals(header);
-                
-                if (semicolonIndex > 0)
+
+                if (semicolonIndex > 0) {
                     contentType = data.substring(0, semicolonIndex);
-            }
-            else {
-                if (commaIndex > 0)
+                }
+            } else {
+                if (commaIndex > 0) {
                     contentType = data.substring(0, commaIndex);
+                }
             }
 
             data = data.substring(commaIndex + 1);
@@ -50,14 +53,15 @@ public class DataUrl {
 
         byte[] bytes;
 
-        if (base64)
-            bytes = Base64.getDecoder().decode(data);
-        else
-            bytes = URLDecoder.decode(data, StandardCharsets.US_ASCII).getBytes(StandardCharsets.US_ASCII);
+        if (base64) {
+            bytes = getDecoder().decode(data);
+        } else {
+            bytes = decode(data, US_ASCII).getBytes(US_ASCII);
+        }
 
         return new DataUrl(contentType, base64, bytes);
     }
-    
+
     private final String contentType;
     private final boolean base64;
     private final byte[] content;
@@ -94,26 +98,28 @@ public class DataUrl {
 
     @Override
     public String toString() {
-        StringBuilder url = new StringBuilder(5 + (contentType == null ? 0 : contentType.length() + 1) + content.length * 2 + (base64 ? 7 : 0));
-        
+        var url = new StringBuilder(5 + (contentType == null ? 0 : contentType.length() + 1) + content.length * 2 + (base64 ? 7 : 0));
+
         url.append("data:");
-        
+
         if (contentType != null) {
             url.append(contentType);
         }
-        
-        if (base64)
+
+        if (base64) {
             url.append(";base64");
-        
+        }
+
         if (contentType != null || base64) {
             url.append(',');
         }
-        
-        if (base64)
-            url.append(Base64.getEncoder().encodeToString(content));
-        else
-            url.append(URLEncoder.encode(new String(content, StandardCharsets.UTF_8), StandardCharsets.UTF_8));
-        
+
+        if (base64) {
+            url.append(getEncoder().encodeToString(content));
+        } else {
+            url.append(encode(new String(content, UTF_8), UTF_8));
+        }
+
         return url.toString();
     }
 
