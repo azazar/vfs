@@ -42,21 +42,21 @@ import org.apache.commons.io.IOUtils;
  *
  * @author Mikhail Yevchenko <spam@azazar.com>
  */
-public class StructuredFileScanner {
+public class VfsScanner {
 
-    private static final Logger LOG = Logger.getLogger(StructuredFileScanner.class.getName());
+    private static final Logger LOG = Logger.getLogger(VfsScanner.class.getName());
 
-    protected Consumer<StructuredFile> consumer;
+    protected Consumer<VfsFile> consumer;
 
-    public StructuredFileScanner(Consumer<StructuredFile> consumer) {
+    public VfsScanner(Consumer<VfsFile> consumer) {
         this.consumer = consumer;
     }
 
-    public void scan(StructuredFile file) throws IOException {
+    public void scan(VfsFile file) throws IOException {
         scan(file, new AutoStream(file::open));
     }
 
-    public void scan(StructuredFile file, InputStream in) throws IOException {
+    public void scan(VfsFile file, InputStream in) throws IOException {
         String p = file.getLastPath().toLowerCase();
 
         if (p.endsWith(".gz") || p.endsWith(".zst")) {
@@ -68,7 +68,7 @@ public class StructuredFileScanner {
                 final ZipFile zf = new ZipFile((File) file.file);
                 zf.stream().parallel().forEach(ze -> {
                     try {
-                        StructuredFile f = new StructuredFile(file.file, ze.getName());
+                        VfsFile f = new VfsFile(file.file, ze.getName());
                         f.setLastModified(ze.getTime());
                         f.setOpener(
                                 () -> zf.getInputStream(ze)
@@ -77,7 +77,7 @@ public class StructuredFileScanner {
                                 () -> zf.getInputStream(ze)
                         ), true);
                     } catch (IOException | RuntimeException ex) {
-                        Logger.getLogger(StructuredFileScanner.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(VfsScanner.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 });
             } else {
@@ -87,7 +87,7 @@ public class StructuredFileScanner {
                         String[] deepPath = new String[file.archived.length + 1];
                         System.arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
                         deepPath[file.archived.length] = e.getName();
-                        StructuredFile df = new StructuredFile(file.file, deepPath);
+                        VfsFile df = new VfsFile(file.file, deepPath);
                         df.setLastModified(e.getTime());
                         df.setOpener(() -> {
                             df.setOpener(null);
@@ -152,7 +152,7 @@ public class StructuredFileScanner {
 
                 a.getFileHeaders().stream().forEach(fh -> {
                     deepPath[file.archived.length] = fh.getFileNameString();
-                    StructuredFile df = new StructuredFile(file.file, deepPath);
+                    VfsFile df = new VfsFile(file.file, deepPath);
                     df.setLastModified(fh.getMTime().getTime());
 
                     df.setOpener(
@@ -182,7 +182,7 @@ public class StructuredFileScanner {
         consumer.accept(file);
     }
 
-    public void scan(StructuredFile file, InputStream in, boolean closeStream) throws IOException {
+    public void scan(VfsFile file, InputStream in, boolean closeStream) throws IOException {
         try {
             scan(file, in);
         } finally {
@@ -198,13 +198,13 @@ public class StructuredFileScanner {
                 try {
                     scan(t);
                 } catch (IOException | RuntimeException ex) {
-                    Logger.getLogger(StructuredFileScanner.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(VfsScanner.class.getName()).log(Level.SEVERE, null, ex);
                 }
             });
             return;
         }
 
-        scan(new StructuredFile(file));
+        scan(new VfsFile(file));
     }
 
 }

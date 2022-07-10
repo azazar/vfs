@@ -23,29 +23,104 @@
  */
 package net.uo1.vfs;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  *
  * @author Mikhail Yevchenko <spam@azazar.com>
  */
-public class StructuredFile {
+public class VfsFile {
+
+    /**
+     * Resolves Apache Commons VFS2 paths as VfsFile
+     * 
+     * @param path
+     * @return 
+     */
+    public static VfsFile resolvePath(CharSequence path) throws IllegalArgumentException {
+        String[] parsedPath = parsePath(path);
+        
+        Object first;
+        
+        if (DataUrl.isDataUrl(parsedPath[0])) {
+            first = DataUrl.parse(parsedPath[0]);
+        }
+        else if (parsedPath[0].contains(":")) {
+            try {
+                first = new URL(parsedPath[0]);
+            }
+            catch (MalformedURLException ex) {
+                throw new IllegalArgumentException(ex);
+            }
+        }
+        else {
+            first = new File(parsedPath[0]);
+        }
+        
+        return new VfsFile(first, Arrays.copyOfRange(parsedPath, 1, parsedPath.length));
+    }
+
+    public static String[] parsePath(CharSequence path) throws IllegalArgumentException {
+        ArrayList<CharSequence> schemes = new ArrayList<>();
+        
+        schemeSearchLoop:
+        while(true) {
+            for(int i = 0; i < path.length(); i++) {
+                char c = path.charAt(i);
+                
+                if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+                    continue;
+                }
+                
+                if (i > 0) {
+                    if (c == ':') {
+                        schemes.add(path.subSequence(0, i));
+                        path = path.subSequence(i + 1, path.length());
+                        continue schemeSearchLoop;
+                    }
+                }
+                
+                break schemeSearchLoop;
+            }
+            
+            break;
+        }
+        
+        String[] paths = StringUtils.split(path.toString(), '!');
+        
+        if (schemes.size() >= 1) {
+            CharSequence lastScheme = schemes.get(schemes.size() - 1);
+            
+            if ("file".equals(lastScheme) && paths[0].startsWith("//"))
+                paths[0] = paths[0].substring(2);
+            else
+                paths[0] = lastScheme + ":" + paths[0];
+            
+        }
+        
+        return paths;
+    }
 
     public final Object file;
     public final String[] archived;
     private Callable<InputStream> opener = new AutoOpener(this);
     private Long modified = null;
 
-    public StructuredFile(Object file, String... archived) {
+    public VfsFile(Object file, String... archived) {
         this.file = Objects.requireNonNull(file);
         this.archived = Objects.requireNonNull(archived);
     }
@@ -96,7 +171,9 @@ public class StructuredFile {
 
     public InputStream open() throws IOException {
         if (archived.length == 0) {
-            if (file instanceof File) {
+            if (file instanceof DataUrl) {
+                return new ByteArrayInputStream(((DataUrl) file).getContent());
+            } else if (file instanceof File) {
                 return new FileInputStream((File) file);
             } else if (file instanceof URL) {
                 return ((URL) file).openStream();
@@ -115,6 +192,13 @@ public class StructuredFile {
     }
 
     public byte[] getContent() throws IOException {
+        if (archived.length == 0) {
+            if (file instanceof byte[])
+                return (byte[])file;
+            else if (file instanceof DataUrl)
+                return ((DataUrl)file).getContent();
+        }
+
         try ( InputStream is = open()) {
             return IOUtils.toByteArray(is);
         }
