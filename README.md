@@ -6,14 +6,14 @@ But now it's a bit more than that.
 
 ## Supported containers and compressors
 
-Format|Extensions|Remarks
+Format|Extensions|Supported by
 -|-|-
-Zip|.zip|
-Tar|.tar/.tgz|
-Rar|.rar|Only supported by scanner yet
-GZip|.gz|
-BZip2|.bz2|
-ZStd|.zst|
+Zip|.zip|Both
+Tar|.tar/.tgz|VFS
+Rar|.rar|Scanner
+GZip|.gz|VFS
+BZip2|.bz2|VFS
+ZStd|.zst|VFS
 
 ## Example
 
