@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.Callable;
 import static java.util.logging.Level.SEVERE;
@@ -28,8 +29,27 @@ import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStre
  * @author Mikhail Yevchenko <123@ǟẓåẓạŗ.ćọ₥>
  */
 class AutoOpener implements Callable<InputStream> {
+    
+    private static String USER_AGENT = "VFS/1.0 (Java; +https://github.com/azazar/vfs/)";
+    private static int HTTP_TIMEOUT = 600;
 
     private static final Logger LOG = getLogger(AutoOpener.class.getName());
+
+    public static String getUserAgent() {
+        return USER_AGENT;
+    }
+
+    public static void setUserAgent(String USER_AGENT) {
+        AutoOpener.USER_AGENT = USER_AGENT;
+    }
+
+    public static int getHttpTimeout() {
+        return HTTP_TIMEOUT;
+    }
+
+    public static void setHttpTimeout(int HTTP_TIMEOUT) {
+        AutoOpener.HTTP_TIMEOUT = HTTP_TIMEOUT;
+    }
 
     private final VfsFile file;
 
@@ -143,7 +163,26 @@ class AutoOpener implements Callable<InputStream> {
             in = new FileInputStream((File) file.file);
             filename = ((File) file.file).getName();
         } else if (file.file instanceof URL) {
-            in = ((URL) file.file).openStream();
+            var proto = ((URL) file.file).getProtocol();
+
+            if ("http".equals(proto) || "https".equals(proto)) {
+                var conn = (HttpURLConnection) ((URL) file.file).openConnection();
+
+                if (getUserAgent() != null) {
+                    conn.setRequestProperty("User-Agent", getUserAgent());
+                }
+
+                if (getHttpTimeout() > 0) {
+                    conn.setConnectTimeout(HTTP_TIMEOUT);
+                    conn.setReadTimeout(HTTP_TIMEOUT);
+                }
+
+                in = conn.getInputStream();
+            }
+            else {
+                in = ((URL) file.file).openStream();
+            }
+
             filename = ((URL) file.file).getFile();
         } else {
             throw new IllegalStateException(file.file.toString());
