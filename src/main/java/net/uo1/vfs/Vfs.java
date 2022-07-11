@@ -3,6 +3,7 @@
  */
 package net.uo1.vfs;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -16,18 +17,37 @@ public class Vfs {
     private static int HTTP_TIMEOUT = 600;
     
     private static StreamOpener<URL> HTTP_URL_OPENER = url -> {
-        var conn = (HttpURLConnection) url.openConnection();
+        var reqUrl = url;
+        
+        for(int i = 0; i < 10; i++) {
+            var conn = (HttpURLConnection) reqUrl.openConnection();
 
-        if (Vfs.getDefaultUserAgent() != null) {
-            conn.setRequestProperty("User-Agent", getDefaultUserAgent());
+            conn.setInstanceFollowRedirects(true);
+
+            if (Vfs.getDefaultUserAgent() != null) {
+                conn.setRequestProperty("User-Agent", getDefaultUserAgent());
+            }
+
+            if (Vfs.getDefaultHttpTimeout() > 0) {
+                conn.setConnectTimeout(Vfs.getDefaultHttpTimeout());
+                conn.setReadTimeout(Vfs.getDefaultHttpTimeout());
+            }
+            
+            var status = conn.getResponseCode();
+
+            if (status == 200)
+                return conn.getInputStream();
+            
+            if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER) {
+                reqUrl = new URL(reqUrl, conn.getHeaderField("Location"));
+                
+                continue;
+            }
+            
+            throw new IOException("Invalid response code received for " + reqUrl);
         }
-
-        if (Vfs.getDefaultHttpTimeout() > 0) {
-            conn.setConnectTimeout(Vfs.getDefaultHttpTimeout());
-            conn.setReadTimeout(Vfs.getDefaultHttpTimeout());
-        }
-
-        return conn.getInputStream();
+        
+        throw new IOException("Too many redirects");
     };
 
     private static StreamOpener<URL> URL_OPENER = url -> {
