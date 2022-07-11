@@ -12,6 +12,8 @@ import static java.util.Base64.getEncoder;
 import static java.util.logging.Level.SEVERE;
 import static java.util.logging.Logger.getLogger;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import static net.uo1.vfs.VfsFile.parsePath;
 import static net.uo1.vfs.VfsFile.resolvePath;
 import static org.apache.commons.io.IOUtils.copy;
@@ -59,6 +61,13 @@ public class VfsFileTest {
     }
 
     @Test
+    public void testReadZipDataUrl() throws IOException {
+        var vFile = resolvePath("zip:" + new DataUrl("application/zip", true, zip("test", "test.txt")).toString() + "!test.txt");
+
+        assertArrayEquals("test".getBytes(US_ASCII), vFile.getContent());
+    }
+
+    @Test
     public void testParsePath() {
         String[] parsedPath;
 
@@ -80,9 +89,27 @@ public class VfsFileTest {
 
     private byte[] gzip(byte[] bytes) {
         var bos = new ByteArrayOutputStream();
-        var bis = new ByteArrayInputStream(bytes);
         try ( var gos = new GZIPOutputStream(bos)) {
-            copy(bis, gos);
+            gos.write(bytes);
+        } catch (IOException ex) {
+            getLogger(VfsFileTest.class.getName()).log(SEVERE, null, ex);
+        }
+
+        return bos.toByteArray();
+    }
+    
+    private byte[] zip(String data, String filename) {
+        return zip(data.getBytes(US_ASCII), filename);
+    }
+
+    private byte[] zip(byte[] data, String filename) {
+        var bos = new ByteArrayOutputStream();
+        try ( var gos = new ZipOutputStream(bos)) {
+            var entry = new ZipEntry(filename);
+            entry.setSize(data.length);
+            gos.putNextEntry(entry);
+            gos.write(data);
+            gos.closeEntry();
         } catch (IOException ex) {
             getLogger(VfsFileTest.class.getName()).log(SEVERE, null, ex);
         }
