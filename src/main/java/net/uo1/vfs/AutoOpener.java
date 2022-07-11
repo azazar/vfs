@@ -68,10 +68,12 @@ class AutoOpener implements Callable<InputStream> {
             var zis = new ZipInputStream(in);
 
             try {
-                ZipEntry ze;
+                ZipEntry entry, lastEntry = null;
 
-                while ((ze = zis.getNextEntry()) != null) {
-                    if (ze.getName().equals(internal[0])) {
+                while ((entry = zis.getNextEntry()) != null) {
+                    lastEntry = entry;
+
+                    if (entry.getName().equals(internal[0])) {
                         InputStream w = zis;
                         zis = null;
                         return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], shift(internal)), () -> {
@@ -83,6 +85,8 @@ class AutoOpener implements Callable<InputStream> {
                         });
                     }
                 }
+
+                throw new FileNotFoundException(internal[0] + " in " + filename + " (" + (lastEntry == null ? "no entries found in archive" : "last entry: " + lastEntry.getName()) + ")");
             } finally {
                 if (zis != null) {
                     zis.close();
@@ -94,10 +98,12 @@ class AutoOpener implements Callable<InputStream> {
             var zis = new TarArchiveInputStream(filename.endsWith(".tgz") ? new GZIPInputStream(in) : in);
 
             try {
-                TarArchiveEntry ze;
+                TarArchiveEntry entry, lastEntry = null;
 
-                while ((ze = zis.getNextTarEntry()) != null) {
-                    if (ze.getName().equals(internal[0])) {
+                while ((entry = zis.getNextTarEntry()) != null) {
+                    lastEntry = entry;
+
+                    if (entry.getName().equals(internal[0])) {
                         InputStream w = zis;
                         zis = null;
                         return new InputStreamWithCloseHook(openWrappedStream(w, internal[0], shift(internal)), () -> {
@@ -109,6 +115,8 @@ class AutoOpener implements Callable<InputStream> {
                         });
                     }
                 }
+
+                throw new FileNotFoundException(internal[0] + " in " + filename + " (" + (lastEntry == null ? "no entries found in archive" : "last entry: " + lastEntry.getName()) + ")");
             } finally {
                 if (zis != null) {
                     zis.close();
