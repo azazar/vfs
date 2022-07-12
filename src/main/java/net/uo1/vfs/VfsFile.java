@@ -175,7 +175,7 @@ public class VfsFile {
             } else if (file instanceof File) {
                 return new FileInputStream((File) file);
             } else if (file instanceof URL) {
-                return ((URL) file).openStream();
+                return Vfs.getUrlOpener().open((URL) file);
             } else {
                 throw new IllegalStateException(file.getClass().toString());
             }
