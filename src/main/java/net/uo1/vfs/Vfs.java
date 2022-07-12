@@ -14,7 +14,7 @@ import java.net.URL;
 public class Vfs {
     
     private static String USER_AGENT = "VFS/1.0 (Java; +https://github.com/azazar/vfs/)";
-    private static int HTTP_TIMEOUT = 600;
+    private static int HTTP_TIMEOUT = 600000;
     
     private static StreamOpener<URL> HTTP_URL_OPENER = url -> {
         var reqUrl = url;
