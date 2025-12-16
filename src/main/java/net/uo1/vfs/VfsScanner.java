@@ -79,6 +79,8 @@ public class VfsScanner {
                         scan(f, new AutoStream(
                                 () -> zf.getInputStream(ze)
                         ), true);
+                    } catch (VfsInterruptException ex) {
+                        throw ex;
                     } catch (IOException | RuntimeException ex) {
                         getLogger(VfsScanner.class.getName()).log(SEVERE, null, ex);
                     }
@@ -130,6 +132,8 @@ public class VfsScanner {
 
                         df.setOpener(null);
                     }
+                } catch (VfsInterruptException ex) {
+                    throw ex;
                 } catch (IOException | RuntimeException ex) {
                     LOG.log(SEVERE, "Error scanning " + file, ex);
                 }
@@ -171,6 +175,8 @@ public class VfsScanner {
                     df.setOpener(null);
                 });
 
+            } catch (VfsInterruptException ex) {
+                throw ex;
             } catch (RarException | IOException | RuntimeException ex) {
                 LOG.log(SEVERE, "Error scanning " + file, ex);
             } finally {
@@ -200,6 +206,8 @@ public class VfsScanner {
             asList(file.listFiles()).parallelStream().forEach(t -> {
                 try {
                     scan(t);
+                } catch (VfsInterruptException ex) {
+                    throw ex;
                 } catch (IOException | RuntimeException ex) {
                     getLogger(VfsScanner.class.getName()).log(SEVERE, null, ex);
                 }
