@@ -61,6 +61,6 @@ public class Example {
 <dependency>
     <groupId>com.github.azazar</groupId>
     <artifactId>vfs</artifactId>
-    <version>1.1.5</version>
+    <version>1.1.12</version>
 </dependency>
 ```
