@@ -327,15 +327,30 @@ public class VfsScanner implements AutoCloseable {
     }
 
     /**
-     * Stops the scanning process by throwing a {@link VfsInterruptException}.
+     * Stops the scanning process from an external thread.
      * <p>
      * This method signals all scanning operations to terminate as soon as possible.
+     * It should be called from outside the scanner's consumer callback.
+     * </p>
+     */
+    public void stop() {
+        interruptException = new VfsInterruptException();
+        executor.shutdownNow();
+    }
+
+    /**
+     * Stops the scanning process from within the scanner's consumer callback.
+     * <p>
+     * This method signals all scanning operations to terminate as soon as possible
+     * and throws a {@link VfsInterruptException} to immediately exit the current scan.
      * </p>
      *
      * @throws VfsInterruptException always thrown to interrupt scanning
      */
-    public void stop() {
-        throw interruptException = new VfsInterruptException();
+    public void stopFromConsumer() {
+        interruptException = new VfsInterruptException();
+        executor.shutdownNow();
+        throw interruptException;
     }
 
     /**
