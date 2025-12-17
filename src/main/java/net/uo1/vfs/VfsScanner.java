@@ -35,7 +35,6 @@ import static java.lang.System.arraycopy;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -84,8 +83,10 @@ public class VfsScanner implements AutoCloseable {
 
         if (p.endsWith(".zip")) {
             if (file.isNative()) {
+                // Note: ZipFile is intentionally not closed here as it's used by async executor tasks
+                @SuppressWarnings("resource")
                 final var zf = new ZipFile((File) file.file);
-                for (Enumeration<ZipEntry> e = (Enumeration<ZipEntry>) zf.entries(); interruptException == null && e.hasMoreElements();) {
+                for (Enumeration<? extends ZipEntry> e = zf.entries(); interruptException == null && e.hasMoreElements();) {
                     ZipEntry ze = e.nextElement();
 
                     executor.submit(() -> {
@@ -188,7 +189,7 @@ public class VfsScanner implements AutoCloseable {
                         throw interruptException;
                     }
 
-                    deepPath[file.archived.length] = fh.getFileNameString();
+                    deepPath[file.archived.length] = fh.getFileName();
                     var df = new VfsFile(file.file, deepPath);
                     df.setLastModified(fh.getMTime().getTime());
 

@@ -23,15 +23,15 @@ public class InputStreamWithCloseHookTest {
             out.println(IOUtils.toString(i, UTF_8));
         }
 
-        var scanner = new VfsScanner(file -> {
+        try (var scanner = new VfsScanner(file -> {
             try {
                 out.println(file.getContentAsUTF8String());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        });
-
-        scanner.scan(new File("/tmp/textfiles.zip"));
+        })) {
+            scanner.scan(new File("/tmp/textfiles.zip"));
+        }
 
     }
 

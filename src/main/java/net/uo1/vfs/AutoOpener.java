@@ -100,7 +100,7 @@ class AutoOpener implements Callable<InputStream> {
             try {
                 TarArchiveEntry entry, lastEntry = null;
 
-                while ((entry = zis.getNextTarEntry()) != null) {
+                while ((entry = zis.getNextEntry()) != null) {
                     lastEntry = entry;
 
                     if (entry.getName().equals(internal[0])) {

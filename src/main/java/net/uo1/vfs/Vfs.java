@@ -39,7 +39,11 @@ public class Vfs {
                 return conn.getInputStream();
             
             if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER) {
-                reqUrl = new URL(reqUrl, conn.getHeaderField("Location"));
+                try {
+                    reqUrl = reqUrl.toURI().resolve(conn.getHeaderField("Location")).toURL();
+                } catch (java.net.URISyntaxException ex) {
+                    throw new IOException("Invalid redirect URL: " + conn.getHeaderField("Location"), ex);
+                }
                 
                 continue;
             }

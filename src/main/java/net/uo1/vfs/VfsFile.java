@@ -62,8 +62,8 @@ public class VfsFile {
             first = parse(parsedPath[0]);
         } else if (parsedPath[0].contains(":")) {
             try {
-                first = new URL(parsedPath[0]);
-            } catch (MalformedURLException ex) {
+                first = java.net.URI.create(parsedPath[0]).toURL();
+            } catch (MalformedURLException | IllegalArgumentException ex) {
                 throw new IllegalArgumentException(ex);
             }
         } else {

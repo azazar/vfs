@@ -3,7 +3,6 @@
  */
 package net.uo1.vfs;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -16,7 +15,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import static net.uo1.vfs.VfsFile.parsePath;
 import static net.uo1.vfs.VfsFile.resolvePath;
-import static org.apache.commons.io.IOUtils.copy;
 import org.junit.AfterClass;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
