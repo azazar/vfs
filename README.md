@@ -29,7 +29,7 @@ public class Example {
     
     public static void scan() throws IOException {
         // print content of all files in zip archive "archive"
-        try(VfsFileScanner s = new VfsFileScanner(file -> {
+        try(VfsScanner s = new VfsScanner(file -> {
             try {
                 System.out.println(file.getContentAsUTF8String());
             }
@@ -38,7 +38,8 @@ public class Example {
             }
         })) {
             s.scan(new File("archive.zip"));
-        };
+        }
+    }
     }
     
 }
