@@ -8,6 +8,11 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
+ * Global configuration and utility class for the Virtual File System.
+ * <p>
+ * Provides static configuration for HTTP settings (user agent, timeouts)
+ * and customizable URL openers for handling different protocols.
+ * </p>
  *
  * @author m
  */
@@ -65,34 +70,74 @@ public class Vfs {
             }
     };
 
+    /**
+     * Returns the default User-Agent header used for HTTP requests.
+     *
+     * @return the default user agent string
+     */
     public static String getDefaultUserAgent() {
         return USER_AGENT;
     }
 
+    /**
+     * Sets the default User-Agent header for HTTP requests.
+     *
+     * @param userAgent the user agent string to use
+     */
     public static void setDefaultUserAgent(String userAgent) {
         USER_AGENT = userAgent;
     }
 
+    /**
+     * Returns the default timeout for HTTP connections in milliseconds.
+     *
+     * @return the timeout in milliseconds
+     */
     public static int getDefaultHttpTimeout() {
         return HTTP_TIMEOUT;
     }
 
+    /**
+     * Sets the default timeout for HTTP connections.
+     *
+     * @param timeout the timeout in milliseconds
+     */
     public static void setDefaultHttpTimeout(int timeout) {
         HTTP_TIMEOUT = timeout;
     }
 
+    /**
+     * Returns the current HTTP URL opener used for http/https protocols.
+     *
+     * @return the HTTP URL opener
+     */
     public static StreamOpener<URL> getHttpUrlOpener() {
         return HTTP_URL_OPENER;
     }
 
+    /**
+     * Sets a custom HTTP URL opener for http/https protocols.
+     *
+     * @param opener the stream opener to use for HTTP URLs
+     */
     public static void setHttpUrlOpener(StreamOpener<URL> opener) {
         Vfs.HTTP_URL_OPENER = opener;
     }
 
+    /**
+     * Returns the current general URL opener.
+     *
+     * @return the URL opener
+     */
     public static StreamOpener<URL> getUrlOpener() {
         return URL_OPENER;
     }
 
+    /**
+     * Sets a custom general URL opener.
+     *
+     * @param opener the stream opener to use for URLs
+     */
     public static void setUrlOpener(StreamOpener<URL> opener) {
         Vfs.URL_OPENER = opener;
     }

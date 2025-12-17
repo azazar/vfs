@@ -42,16 +42,40 @@ import static org.apache.commons.io.IOUtils.toByteArray;
 import static org.apache.commons.lang3.StringUtils.split;
 
 /**
+ * Represents a file that may be located within archives or accessed via URLs.
+ * <p>
+ * VfsFile provides a unified interface for accessing files from various sources:
+ * <ul>
+ *   <li>Local filesystem files</li>
+ *   <li>Files within archives (ZIP, TAR, RAR, etc.)</li>
+ *   <li>URLs (HTTP, HTTPS, etc.)</li>
+ *   <li>Data URLs (embedded content)</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Nested archive paths are supported using Apache Commons VFS2 style paths,
+ * e.g., {@code /path/to/archive.zip!/inner/file.txt}
+ * </p>
  *
- * @author Mikhail Yevchenko <spam@azazar.com>
+ * @author Mikhail Yevchenko &lt;spam@azazar.com&gt;
  */
 public class VfsFile {
 
     /**
-     * Resolves Apache Commons VFS2 paths as VfsFile
+     * Resolves an Apache Commons VFS2 style path to a VfsFile.
+     * <p>
+     * Supports paths like:
+     * <ul>
+     *   <li>{@code /local/path/file.txt}</li>
+     *   <li>{@code http://example.com/file.zip!/inner.txt}</li>
+     *   <li>{@code file:///path/archive.tar.gz!/dir/file.txt}</li>
+     *   <li>{@code data:application/gzip;base64,...}</li>
+     * </ul>
+     * </p>
      *
-     * @param path
-     * @return
+     * @param path the VFS2 style path to resolve
+     * @return a VfsFile representing the specified path
+     * @throws IllegalArgumentException if the path cannot be parsed
      */
     public static VfsFile resolvePath(CharSequence path) throws IllegalArgumentException {
         var parsedPath = parsePath(path);
@@ -73,6 +97,16 @@ public class VfsFile {
         return new VfsFile(first, copyOfRange(parsedPath, 1, parsedPath.length));
     }
 
+    /**
+     * Parses a VFS2 style path into its component parts.
+     * <p>
+     * The path is split on '!' characters to separate archive boundaries.
+     * </p>
+     *
+     * @param path the path to parse
+     * @return an array of path components
+     * @throws IllegalArgumentException if the path is malformed
+     */
     public static String[] parsePath(CharSequence path) throws IllegalArgumentException {
         var schemes = new ArrayList<CharSequence>();
 
@@ -120,11 +154,26 @@ public class VfsFile {
     private Callable<InputStream> opener = new AutoOpener(this);
     private Long modified = null;
 
+    /**
+     * Creates a new VfsFile with the specified base file and archived path components.
+     *
+     * @param file     the base file object (File, URL, DataUrl, or byte[])
+     * @param archived the path components within archives (may be empty)
+     */
     public VfsFile(Object file, String... archived) {
         this.file = requireNonNull(file);
         this.archived = requireNonNull(archived);
     }
 
+    /**
+     * Returns the last (innermost) path component.
+     * <p>
+     * For archived files, returns the path within the archive.
+     * For regular files, returns the file path.
+     * </p>
+     *
+     * @return the last path component
+     */
     public String getLastPath() {
         if (archived.length == 0) {
             if (file instanceof File) {
@@ -137,6 +186,11 @@ public class VfsFile {
         }
     }
 
+    /**
+     * Returns the filename (without directory path) of the innermost file.
+     *
+     * @return the filename
+     */
     public String getLastName() {
         if (archived.length == 0) {
             if (file instanceof File) {
@@ -160,14 +214,34 @@ public class VfsFile {
         return name;
     }
 
+    /**
+     * Returns the opener used to create input streams for this file.
+     *
+     * @return the current opener
+     */
     public Callable<InputStream> getOpener() {
         return opener;
     }
 
+    /**
+     * Sets a custom opener for this file.
+     *
+     * @param opener the opener to use, or {@code null} to disable
+     */
     public void setOpener(Callable<InputStream> opener) {
         this.opener = opener;
     }
 
+    /**
+     * Opens an input stream for reading this file's content.
+     * <p>
+     * For archived files, this will navigate through the archive hierarchy
+     * to locate and decompress the target file.
+     * </p>
+     *
+     * @return an input stream for reading the file content
+     * @throws IOException if an I/O error occurs
+     */
     public InputStream open() throws IOException {
         if (archived.length == 0) {
             if (file instanceof DataUrl) {
@@ -190,6 +264,12 @@ public class VfsFile {
         }
     }
 
+    /**
+     * Reads and returns the entire file content as a byte array.
+     *
+     * @return the file content as bytes
+     * @throws IOException if an I/O error occurs
+     */
     public byte[] getContent() throws IOException {
         if (archived.length == 0) {
             if (file instanceof byte[]) {
@@ -204,6 +284,15 @@ public class VfsFile {
         }
     }
 
+    /**
+     * Processes the file content in chunks using the specified processor.
+     * <p>
+     * This is more memory-efficient than {@link #getContent()} for large files.
+     * </p>
+     *
+     * @param dsp the data stream processor to handle the content
+     * @throws IOException if an I/O error occurs
+     */
     public void process(DataStreamProcessor dsp) throws IOException {
         try ( var is = open()) {
             var buf = new byte[65536];
@@ -215,14 +304,32 @@ public class VfsFile {
         }
     }
 
+    /**
+     * Reads the file content as a UTF-8 encoded string.
+     *
+     * @return the file content as a string
+     * @throws IOException if an I/O error occurs
+     */
     public String getContentAsUTF8String() throws IOException {
         return new String(getContent(), UTF_8);
     }
 
+    /**
+     * Reads the file content as a string with the specified character encoding.
+     *
+     * @param charset the character encoding to use
+     * @return the file content as a string
+     * @throws IOException if an I/O error occurs
+     */
     public String getContentAsString(Charset charset) throws IOException {
         return new String(getContent(), charset);
     }
 
+    /**
+     * Checks if this file is a native filesystem file (not archived or remote).
+     *
+     * @return {@code true} if this is a local filesystem file, {@code false} otherwise
+     */
     public boolean isNative() {
         return archived.length == 0 && file instanceof File;
     }
@@ -237,6 +344,11 @@ public class VfsFile {
         return b.toString();
     }
 
+    /**
+     * Returns the last modification time of this file.
+     *
+     * @return the modification time in milliseconds since epoch, or {@code null} if unknown
+     */
     public Long lastModified() {
         if (modified != null) {
             return modified;
@@ -245,6 +357,11 @@ public class VfsFile {
         return isNative() ? ((File) file).lastModified() : null;
     }
 
+    /**
+     * Sets the last modification time for this file.
+     *
+     * @param modified the modification time in milliseconds since epoch
+     */
     public void setLastModified(Long modified) {
         this.modified = modified;
     }

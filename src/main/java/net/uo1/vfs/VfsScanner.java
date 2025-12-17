@@ -44,8 +44,23 @@ import java.util.zip.ZipInputStream;
 import static org.apache.commons.io.IOUtils.copy;
 
 /**
+ * Scans files and archives recursively, invoking a consumer for each file found.
+ * <p>
+ * VfsScanner supports:
+ * <ul>
+ *   <li>Local filesystem directories and files</li>
+ *   <li>ZIP archives</li>
+ *   <li>RAR archives</li>
+ *   <li>Nested archives (archives within archives)</li>
+ * </ul>
+ * </p>
+ * <p>
+ * Scanning is performed in parallel using an {@link ExecutorService}.
+ * The scanner implements {@link AutoCloseable} and should be used with
+ * try-with-resources or explicitly closed when done.
+ * </p>
  *
- * @author Mikhail Yevchenko <spam@azazar.com>
+ * @author Mikhail Yevchenko &lt;spam@azazar.com&gt;
  */
 public class VfsScanner implements AutoCloseable {
 
@@ -56,20 +71,44 @@ public class VfsScanner implements AutoCloseable {
     protected Consumer<VfsFile> consumer;
     protected ExecutorService executor;
 
+    /**
+     * Creates a new VfsScanner with the specified consumer and executor.
+     *
+     * @param consumer the consumer to invoke for each file found
+     * @param executor the executor service for parallel processing
+     */
     public VfsScanner(Consumer<VfsFile> consumer, ExecutorService executor) {
         this.consumer = consumer;
         this.executor = executor;
     }
 
+    /**
+     * Creates a new VfsScanner with the specified consumer and a default work-stealing pool.
+     *
+     * @param consumer the consumer to invoke for each file found
+     */
     public VfsScanner(Consumer<VfsFile> consumer) {
         this.consumer = consumer;
         this.executor = Executors.newWorkStealingPool();
     }
 
+    /**
+     * Scans a VfsFile, recursively processing archives.
+     *
+     * @param file the file to scan
+     * @throws IOException if an I/O error occurs
+     */
     public void scan(VfsFile file) throws IOException {
         scan(file, new AutoStream(file::open));
     }
 
+    /**
+     * Scans a VfsFile using the provided input stream.
+     *
+     * @param file the file being scanned
+     * @param in   the input stream to read from
+     * @throws IOException if an I/O error occurs
+     */
     public void scan(VfsFile file, InputStream in) throws IOException {
         if (interruptException != null) {
             throw interruptException;
@@ -232,6 +271,14 @@ public class VfsScanner implements AutoCloseable {
         consumer.accept(file);
     }
 
+    /**
+     * Scans a VfsFile using the provided input stream, optionally closing it when done.
+     *
+     * @param file        the file being scanned
+     * @param in          the input stream to read from
+     * @param closeStream whether to close the stream after scanning
+     * @throws IOException if an I/O error occurs
+     */
     public void scan(VfsFile file, InputStream in, boolean closeStream) throws IOException {
         try {
             scan(file, in);
@@ -242,6 +289,15 @@ public class VfsScanner implements AutoCloseable {
         }
     }
 
+    /**
+     * Scans a local filesystem file or directory.
+     * <p>
+     * If the file is a directory, all contents are scanned recursively.
+     * </p>
+     *
+     * @param file the file or directory to scan
+     * @throws IOException if an I/O error occurs
+     */
     public void scan(File file) throws IOException {
         if (interruptException != null) {
             throw interruptException;
@@ -269,11 +325,22 @@ public class VfsScanner implements AutoCloseable {
 
         scan(new VfsFile(file));
     }
-    
+
+    /**
+     * Stops the scanning process by throwing a {@link VfsInterruptException}.
+     * <p>
+     * This method signals all scanning operations to terminate as soon as possible.
+     * </p>
+     *
+     * @throws VfsInterruptException always thrown to interrupt scanning
+     */
     public void stop() {
         throw interruptException = new VfsInterruptException();
     }
-    
+
+    /**
+     * Closes this scanner and shuts down the executor service.
+     */
     @Override
     public void close() {
         executor.close();

@@ -24,9 +24,14 @@
 package net.uo1.vfs;
 
 /**
- * Use this exception to interrupt scanning process.
+ * Exception thrown to interrupt a {@link VfsScanner} scanning operation.
+ * <p>
+ * This is a runtime exception that can be thrown from within a consumer callback
+ * to signal that scanning should stop. The scanner will propagate this exception
+ * after attempting to terminate pending operations.
+ * </p>
  *
- * @author Mikhail Yevchenko <spam@azazar.com>
+ * @author Mikhail Yevchenko &lt;spam@azazar.com&gt;
  */
 public class VfsInterruptException extends RuntimeException {
 
@@ -48,14 +53,33 @@ public class VfsInterruptException extends RuntimeException {
         super(msg);
     }
 
+    /**
+     * Constructs an instance with the specified detail message and cause.
+     *
+     * @param message the detail message
+     * @param cause   the cause of this exception
+     */
     public VfsInterruptException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Constructs an instance with the specified cause.
+     *
+     * @param cause the cause of this exception
+     */
     public VfsInterruptException(Throwable cause) {
         super(cause);
     }
 
+    /**
+     * Constructs an instance with full control over exception behavior.
+     *
+     * @param message            the detail message
+     * @param cause              the cause of this exception
+     * @param enableSuppression  whether suppression is enabled
+     * @param writableStackTrace whether the stack trace should be writable
+     */
     public VfsInterruptException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }

@@ -11,15 +11,35 @@ import static java.util.Base64.getDecoder;
 import static java.util.Base64.getEncoder;
 
 /**
+ * Represents a data URL (RFC 2397) that embeds data directly in a URL string.
+ * <p>
+ * Data URLs have the format: {@code data:[<mediatype>][;base64],<data>}
+ * </p>
+ * <p>
+ * This class can parse data URLs and convert data back to URL string format.
+ * </p>
  *
  * @author m
  */
 public class DataUrl {
 
+    /**
+     * Checks if the given string is a data URL.
+     *
+     * @param url the string to check
+     * @return {@code true} if the string starts with "data:", {@code false} otherwise
+     */
     public static boolean isDataUrl(String url) {
         return url != null && url.startsWith("data:");
     }
 
+    /**
+     * Parses a data URL string into a DataUrl object.
+     *
+     * @param url the data URL string to parse
+     * @return a new DataUrl instance containing the parsed data
+     * @throws IllegalArgumentException if the URL doesn't start with "data:"
+     */
     public static DataUrl parse(String url) {
         if (!url.startsWith("data:")) {
             throw new IllegalArgumentException(url);
@@ -66,32 +86,65 @@ public class DataUrl {
     private final boolean base64;
     private final byte[] content;
 
+    /**
+     * Creates a new DataUrl with all parameters specified.
+     *
+     * @param contentType the MIME content type, or {@code null} for default
+     * @param base64      whether the content should be base64 encoded
+     * @param content     the binary content
+     */
     public DataUrl(String contentType, boolean base64, byte[] content) {
         this.contentType = contentType;
         this.base64 = base64;
         this.content = content;
     }
 
+    /**
+     * Creates a new DataUrl with base64 encoding enabled.
+     *
+     * @param contentType the MIME content type, or {@code null} for default
+     * @param content     the binary content
+     */
     public DataUrl(String contentType, byte[] content) {
         this.contentType = contentType;
         this.base64 = true;
         this.content = content;
     }
 
+    /**
+     * Creates a new DataUrl with no content type and base64 encoding enabled.
+     *
+     * @param content the binary content
+     */
     public DataUrl(byte[] content) {
         this.contentType = null;
         this.base64 = true;
         this.content = content;
     }
 
+    /**
+     * Returns the MIME content type of this data URL.
+     *
+     * @return the content type, or {@code null} if not specified
+     */
     public String getContentType() {
         return contentType;
     }
 
+    /**
+     * Returns whether the content is base64 encoded in the URL string representation.
+     *
+     * @return {@code true} if base64 encoded, {@code false} otherwise
+     */
     public boolean isBase64() {
         return base64;
     }
 
+    /**
+     * Returns the binary content of this data URL.
+     *
+     * @return the content as a byte array
+     */
     public byte[] getContent() {
         return content;
     }

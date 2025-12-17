@@ -28,14 +28,25 @@ import java.io.InputStream;
 import java.util.concurrent.Callable;
 
 /**
+ * A lazy-loading InputStream wrapper that defers opening the underlying stream until first access.
+ * <p>
+ * This class wraps a {@link Callable} that produces an {@link InputStream}, and only invokes it
+ * when data is first read. This is useful for scenarios where stream creation is expensive
+ * and may not always be needed.
+ * </p>
  *
- * @author Mikhail Yevchenko <spam@azazar.com>
+ * @author Mikhail Yevchenko &lt;spam@azazar.com&gt;
  */
 public class AutoStream extends InputStream {
 
     protected Callable<InputStream> opener;
     protected InputStream wrapped;
 
+    /**
+     * Creates a new AutoStream with the specified opener.
+     *
+     * @param opener a callable that produces the underlying InputStream when invoked
+     */
     public AutoStream(Callable<InputStream> opener) {
         this.opener = opener;
     }

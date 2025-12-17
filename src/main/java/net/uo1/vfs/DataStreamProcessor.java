@@ -24,13 +24,30 @@
 package net.uo1.vfs;
 
 /**
+ * A functional interface for processing byte data in chunks.
+ * <p>
+ * This interface is useful for streaming data processing where the entire content
+ * doesn't need to be loaded into memory at once.
+ * </p>
  *
- * @author Mikhail Yevchenko <m.ṥῥẚɱ.ѓѐḿởύḙ@azazar.com>
+ * @author Mikhail Yevchenko &lt;m.ṥῥẚɱ.ѓѐḿởύḙ@azazar.com&gt;
  */
 public interface DataStreamProcessor {
 
+    /**
+     * Processes a chunk of byte data.
+     *
+     * @param data the byte array containing the data
+     * @param ofs  the offset in the array where the data starts
+     * @param len  the number of bytes to process
+     */
     void process(byte[] data, int ofs, int len);
 
+    /**
+     * Processes an entire byte array.
+     *
+     * @param data the byte array to process
+     */
     default void process(byte[] data) {
         process(data, 0, data.length);
     }
