@@ -25,17 +25,20 @@ package net.uo1.vfs;
 
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
+import com.github.junrar.rarfile.FileHeader;
 import java.io.File;
 import static java.io.File.createTempFile;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import static java.lang.System.arraycopy;
-import static java.util.Arrays.asList;
+import java.util.Enumeration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import static java.util.logging.Level.SEVERE;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import static java.util.logging.Logger.getLogger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -45,14 +48,23 @@ import static org.apache.commons.io.IOUtils.copy;
  *
  * @author Mikhail Yevchenko <spam@azazar.com>
  */
-public class VfsScanner {
+public class VfsScanner implements AutoCloseable {
 
-    private static final Logger LOG = getLogger(VfsScanner.class.getName());
+    private static final Logger LOG = Logger.getLogger(VfsScanner.class.getName());
+    
+    protected volatile VfsInterruptException interruptException = null;
 
     protected Consumer<VfsFile> consumer;
+    protected ExecutorService executor;
+
+    public VfsScanner(Consumer<VfsFile> consumer, ExecutorService executor) {
+        this.consumer = consumer;
+        this.executor = executor;
+    }
 
     public VfsScanner(Consumer<VfsFile> consumer) {
         this.consumer = consumer;
+        this.executor = Executors.newWorkStealingPool();
     }
 
     public void scan(VfsFile file) throws IOException {
@@ -60,6 +72,10 @@ public class VfsScanner {
     }
 
     public void scan(VfsFile file, InputStream in) throws IOException {
+        if (interruptException != null) {
+            throw interruptException;
+        }
+
         var p = file.getLastPath().toLowerCase();
 
         if (p.endsWith(".gz") || p.endsWith(".zst")) {
@@ -69,22 +85,31 @@ public class VfsScanner {
         if (p.endsWith(".zip")) {
             if (file.isNative()) {
                 final var zf = new ZipFile((File) file.file);
-                zf.stream().parallel().forEach(ze -> {
-                    try {
-                        var f = new VfsFile(file.file, ze.getName());
-                        f.setLastModified(ze.getTime());
-                        f.setOpener(
-                                () -> zf.getInputStream(ze)
-                        );
-                        scan(f, new AutoStream(
-                                () -> zf.getInputStream(ze)
-                        ), true);
-                    } catch (VfsInterruptException ex) {
-                        throw ex;
-                    } catch (IOException | RuntimeException ex) {
-                        getLogger(VfsScanner.class.getName()).log(SEVERE, null, ex);
-                    }
-                });
+                for (Enumeration<ZipEntry> e = (Enumeration<ZipEntry>) zf.entries(); interruptException == null && e.hasMoreElements();) {
+                    ZipEntry ze = e.nextElement();
+
+                    executor.submit(() -> {
+                        try {
+                            var f = new VfsFile(file.file, ze.getName());
+                            f.setLastModified(ze.getTime());
+                            f.setOpener(
+                                    () -> zf.getInputStream(ze)
+                            );
+                            scan(f, new AutoStream(
+                                    () -> zf.getInputStream(ze)
+                            ), true);
+                        } catch (VfsInterruptException ex) {
+                            interruptException = ex;
+
+                            throw ex;
+                        } catch (IOException | RuntimeException ex) {
+                            LOG.log(Level.SEVERE, null, ex);
+                        }
+                    });
+                }
+                
+                if (interruptException != null)
+                    throw interruptException;
             } else {
                 try ( var zis = new ZipInputStream(in)) {
                     ZipEntry e;
@@ -133,9 +158,10 @@ public class VfsScanner {
                         df.setOpener(null);
                     }
                 } catch (VfsInterruptException ex) {
+                    interruptException = ex;
                     throw ex;
                 } catch (IOException | RuntimeException ex) {
-                    LOG.log(SEVERE, "Error scanning " + file, ex);
+                    LOG.log(Level.SEVERE, "Error scanning " + file, ex);
                 }
             }
             return;
@@ -156,8 +182,12 @@ public class VfsScanner {
             try ( var a = new Archive(tempFile == null ? (File) file.file : tempFile)) {
                 var deepPath = new String[file.archived.length + 1];
                 arraycopy(file.archived, 0, deepPath, 0, file.archived.length);
+                
+                for(FileHeader fh : a.getFileHeaders()) {
+                    if (interruptException != null) {
+                        throw interruptException;
+                    }
 
-                a.getFileHeaders().stream().forEach(fh -> {
                     deepPath[file.archived.length] = fh.getFileNameString();
                     var df = new VfsFile(file.file, deepPath);
                     df.setLastModified(fh.getMTime().getTime());
@@ -166,19 +196,29 @@ public class VfsScanner {
                             () -> a.getInputStream(fh)
                     );
 
-                    try {
-                        scan(df);
-                    } catch (IOException ex) {
-                        LOG.log(SEVERE, "Error scanning " + file, ex);
+                    Runnable scanTask = () -> {
+                        try {
+                            scan(df);
+                        } catch (VfsInterruptException ex) {
+                            interruptException = ex;
+                            throw ex;
+                        } catch (IOException | RuntimeException ex) {
+                            LOG.log(Level.SEVERE, "Error scanning " + file, ex);
+                        } finally {
+                            df.setOpener(null);
+                        }
+                    };
+                    
+                    if (tempFile == null) {
+                        executor.submit(scanTask);
                     }
+                    else {
+                        scanTask.run();
+                    }
+                }
 
-                    df.setOpener(null);
-                });
-
-            } catch (VfsInterruptException ex) {
-                throw ex;
             } catch (RarException | IOException | RuntimeException ex) {
-                LOG.log(SEVERE, "Error scanning " + file, ex);
+                LOG.log(Level.SEVERE, "Error scanning " + file, ex);
             } finally {
                 if (tempFile != null) {
                     tempFile.delete();
@@ -202,20 +242,40 @@ public class VfsScanner {
     }
 
     public void scan(File file) throws IOException {
+        if (interruptException != null) {
+            throw interruptException;
+        }
+
         if (file.isDirectory()) {
-            asList(file.listFiles()).parallelStream().forEach(t -> {
-                try {
-                    scan(t);
-                } catch (VfsInterruptException ex) {
-                    throw ex;
-                } catch (IOException | RuntimeException ex) {
-                    getLogger(VfsScanner.class.getName()).log(SEVERE, null, ex);
+            for(File t : file.listFiles()) {
+                if (interruptException != null) {
+                    throw interruptException;
                 }
-            });
+
+                executor.submit(() -> {
+                    try {
+                        scan(t);
+                    } catch (VfsInterruptException ex) {
+                        interruptException = ex;
+                        throw ex;
+                    } catch (IOException | RuntimeException ex) {
+                        LOG.log(Level.SEVERE, null, ex);
+                    }
+                });
+            }
             return;
         }
 
         scan(new VfsFile(file));
+    }
+    
+    public void stop() {
+        throw interruptException = new VfsInterruptException();
+    }
+    
+    @Override
+    public void close() {
+        executor.close();
     }
 
 }

@@ -29,14 +29,16 @@ public class Example {
     
     public static void scan() throws IOException {
         // print content of all files in zip archive "archive"
-        new VfsFileScanner(file -> {
+        try(VfsFileScanner s = new VfsFileScanner(file -> {
             try {
                 System.out.println(file.getContentAsUTF8String());
             }
             catch (IOException ex) {
                 ex.printStackTrace();
             }
-        }).scan(new File("archive.zip"));
+        })) {
+            s.scan(new File("archive.zip"));
+        };
     }
     
 }
@@ -61,6 +63,6 @@ public class Example {
 <dependency>
     <groupId>com.github.azazar</groupId>
     <artifactId>vfs</artifactId>
-    <version>1.1.12</version>
+    <version>1.1.13</version>
 </dependency>
 ```
